@@ -1,76 +1,39 @@
 # Leonardo Mendes
 
-**Data & Analytics Engineer** · São Paulo, SP · [LinkedIn](https://www.linkedin.com/in/leomnds)
+Engenheiro de dados e analytics engineer, em São Paulo. Hoje estou no PagBank, na área comercial de adquirência, cuidando das tabelas e dos painéis que o time usa para acompanhar receita e rentabilidade. [LinkedIn](https://www.linkedin.com/in/leomnds)
 
-Construo a camada de dados entre o banco de dados e a decisão: bases bem modeladas, métricas com uma definição única e dashboards que o negócio usa sem precisar pedir extração.
-
-São mais de 10 anos de atuação técnica em dados, do SQL Server on-premise à nuvem (BigQuery e Redshift), em meios de pagamento, banco digital e indústria farmacêutica. Hoje atuo com Analytics Engineering na estratégia comercial de adquirência do PagBank.
-
-## Como eu trabalho
-
-- Modelagem pensada para reuso: uma fonte de verdade por métrica, não uma query por pedido
-- Qualidade de dado como requisito, não como correção depois do problema
-- Automação de cargas, atualizações e distribuição de relatórios recorrentes
-- Entregas que o time de negócio usa com autonomia
+Comecei em 2015 como estagiário, escrevendo procedures em SQL Server para um sistema de benefício em medicamentos. De lá para cá o banco mudou de lugar algumas vezes (servidor próprio, BigQuery, Redshift), mas o trabalho continua o mesmo: descobrir de onde o número vem, deixar a carga previsível e dar a quem consome o dado um motivo para confiar nele.
 
 ## Stack
 
-| Área | Tecnologias |
-|---|---|
-| Linguagens | SQL (avançado), Python, R, DAX, M (Power Query) |
-| Data warehouse e bancos | Amazon Redshift, Google BigQuery, SQL Server, Oracle, PostgreSQL |
-| Orquestração e ETL | Apache Airflow, Cloud Composer, SSIS, n8n |
-| Modelagem e qualidade | Modelagem de dados, data warehouse, arquitetura medalhão, data quality |
-| Cloud | GCP, AWS (Redshift) |
-| BI | Power BI, Looker, Looker Studio |
-| Automação | Power Automate, Microsoft 365 Copilot |
-| Ambiente | Docker, Git, Linux (WSL) |
+- **No dia a dia:** SQL em Redshift, SQL Server e Oracle; Power BI com DAX e Power Query; Power Automate
+- **Em empregos anteriores:** BigQuery, Cloud Composer, SSIS, Looker, Salesforce Marketing Cloud, Python e R
+- **No meu laboratório:** Airflow, PostgreSQL, Docker, n8n e Python
 
-## Experiência
+## Por onde passei
 
-**PagBank** · Especialista em Estratégia Comercial · 2024 – atual
-- Modelagem e transformação em SQL no Amazon Redshift da camada que alimenta os indicadores de performance e rentabilidade da adquirência: TPV, receita bruta e líquida, take rate, net take rate e margem operacional
-- Dashboards em Power BI para acompanhamento desses indicadores e bases analíticas para os estudos da área comercial
-- Automação de rotinas da área com Power Automate e IA agêntica
-
-**PagBank** · Especialista CRM · 2021 – 2024
-- Automação das rotinas de extração de mailings em SQL, com as regras de negócio traduzidas em lógica padronizada e reutilizável
-- Projeto de Data Quality dos dados de contato, que aumentou a taxa de CPC (contato com a pessoa certa) dos mailings
-
-**C6 Bank** · Analista CRM Sênior · 2020 – 2021
-- Estruturação, carga e qualidade dos dados de CRM no BigQuery, com modelagem da base de clientes
-- Motor de campanhas no GCP integrado ao Salesforce Marketing Cloud
-- Orquestração das rotinas de extração com Cloud Composer (Airflow)
-
-**Marketdata** · Analista DBM/BI, alocado no PagSeguro · 2017 – 2020
-- Scripts em SQL Server e Oracle e pacotes SSIS para ETL e automação de processos
-- Administração do banco, com otimização de processos e de armazenamento
-- Modelos estatísticos aplicados direto no banco para uso recorrente
-
-**InterPlayers** · Estágio e Analista DBM/BI · 2014 – 2017
-- Procedures, views, functions e triggers em SQL Server para programas de benefício em medicamentos de indústrias como Bayer, Pfizer e Novartis
+- **InterPlayers (2014 a 2017):** entrei pela infraestrutura, com jobs e backups de SQL Server, e passei para o desenvolvimento de procedures e relatórios
+- **Marketdata (2017 a 2020):** consultoria, com atuação dentro do PagSeguro. ETL em SSIS, administração do banco e modelos estatísticos rodando direto no SQL Server e no Oracle
+- **C6 Bank (2020 a 2021):** dados de CRM no BigQuery, da carga à qualidade, e um motor de campanhas no GCP ligado ao Salesforce Marketing Cloud
+- **PagBank (2021 até hoje):** primeiro no CRM, automatizando extrações de mailing e limpando os dados de contato; desde 2024 na estratégia comercial, com Redshift e Power BI
 
 ## Projetos
 
 ### [lab-dados](https://github.com/leomnds/leomnds/tree/main/lab-dados)
 
-Laboratório de dados local com Airflow 3, PostgreSQL 18 e n8n no Docker. O pipeline `bcb_pix_medalhao` carrega os dados abertos de Pix por município do Banco Central em arquitetura medalhão:
+Um laboratório que roda inteiro no meu computador, com Airflow, PostgreSQL e n8n no Docker. Para ter o que processar, montei um pipeline com os dados abertos de Pix por município do Banco Central, em três camadas: o JSON bruto, uma tabela tipada e um resumo por estado e mês.
 
-- **Bronze:** JSON bruto da API OData do BC, guardado em `jsonb`
-- **Silver:** colunas tipadas, uma linha por município e mês
-- **Gold:** visão por estado e mês, com valor, quantidade, ticket médio e participação de PJ
-- Cargas idempotentes e parametrizadas por mês: reprocessar substitui os dados, sem duplicar
-- Validação de qualidade que barra a gold se o mês vier incompleto ou com valor negativo
-- Ambiente reproduzível: versões fixas no Docker e `setup.sh` que recria tudo do zero (senhas, containers e conexão do Airflow), com scripts de backup e restore
+Cada execução carrega um mês e pode ser repetida sem duplicar nada. Antes de montar o resumo, uma checagem confere se o mês veio inteiro (municípios, estados e valores negativos), para não publicar número de um mês pela metade.
+
+A parte que mais deu trabalho foi a API do Banco Central. Ela devolve erro 500 quando recebe `$skip` e erro 400 com `$filter`, então não dá para paginar nem filtrar no servidor. O parâmetro que parece escolher o mês é, na verdade, o mês inicial: a resposta traz esse mês e todos os seguintes. A solução foi pedir tudo de uma vez e separar o mês no Python, tratando a linha "NAO INFORMADO" que vem sem código de estado.
+
+O ambiente também é reproduzível: versões fixas, um script que sobe tudo do zero, backup e restore.
 
 ### Outros
 
-- [dcalendario-powerquery](https://github.com/leomnds/dcalendario-powerquery): fork de uma dCalendario completa em linguagem M
-- [cobrinha-turbo](https://github.com/leomnds/leomnds/tree/main/cobrinha-turbo): jogo da cobrinha em JavaScript puro, feito por diversão
+- [cobrinha-turbo](https://github.com/leomnds/leomnds/tree/main/cobrinha-turbo): jogo da cobrinha em JavaScript puro, em um único arquivo, em que a cobra acelera a cada fruta
+- [dcalendario-powerquery](https://github.com/leomnds/dcalendario-powerquery): fork de uma tabela calendário completa, escrita em M
 
-## Formação e certificações
+## Formação
 
-- CST em Big Data e Inteligência Analítica, Universidade Anhembi Morumbi (2020 – 2022)
-- Bacharelado em Sistemas de Informação, Uninove (2014 – 2017)
-- Certificações: Power BI Series, Power Query Avançado, Estatística para Análise de Dados, ICS SQL Server Essentials e White Belt Lean Seis Sigma
-- Inglês profissional
+Tecnólogo em Big Data e Inteligência Analítica pela Anhembi Morumbi (2020 a 2022) e bacharel em Sistemas de Informação pela Uninove (2014 a 2017). Certificações em Power BI, Power Query avançado, estatística para análise de dados e SQL Server. Inglês profissional.
