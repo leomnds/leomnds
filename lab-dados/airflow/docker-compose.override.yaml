@@ -1,0 +1,17 @@
+# Complemento ao docker-compose.yaml oficial do Airflow.
+# O Docker Compose junta os dois arquivos automaticamente.
+#
+# Liga o worker do Airflow (quem executa as tarefas) à rede do laboratório,
+# para os DAGs alcançarem o banco pelo nome "lab-postgres".
+# Requer o laboratório (PostgreSQL + n8n) já rodando.
+
+services:
+  airflow-worker:
+    networks:
+      - default
+      - lab
+
+networks:
+  lab:
+    name: lab-dados_default
+    external: true

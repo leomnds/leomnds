@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cobrinha Turbo</title>
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #171c24;
+    --grid: #1d232d;
+    --text: #e8edf4;
+    --muted: #8a94a6;
+    --snake: #4ade80;
+    --snake-dark: #16a34a;
+    --fruit: #f87171;
+    --ghost: #38bdf8;
+    --slow: #c084fc;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  main { width: min(100%, 520px); }
+  h1 {
+    margin: 0 0 12px;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+  }
+  h1 span { color: var(--snake); }
+  .hud {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .stat {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 8px 12px;
+  }
+  .stat small {
+    display: block;
+    color: var(--muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .stat b { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .effects {
+    display: flex;
+    gap: 8px;
+    height: 22px;
+    margin-bottom: 8px;
+  }
+  .effect {
+    flex: 1;
+    position: relative;
+    border-radius: 6px;
+    background: var(--panel);
+    overflow: hidden;
+    font-size: 0.72rem;
+    line-height: 22px;
+    padding: 0 8px;
+    opacity: 0.35;
+  }
+  .effect.on { opacity: 1; }
+  .effect i {
+    position: absolute;
+    inset: 0;
+    width: 0;
+    opacity: 0.35;
+  }
+  .effect span { position: relative; }
+  #fx-ghost i { background: var(--ghost); }
+  #fx-slow i { background: var(--slow); }
+  .board {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid var(--grid);
+    transition: border-color 0.2s;
+    touch-action: none;
+  }
+  .board.ghost { border-color: var(--ghost); border-style: dashed; }
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--panel);
+  }
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-align: center;
+    padding: 20px;
+    background: rgba(14, 17, 22, 0.82);
+  }
+  .overlay[hidden] { display: none; }
+  .overlay h2 { margin: 0; font-size: 1.6rem; }
+  .overlay p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+  .overlay button {
+    margin-top: 6px;
+    font: inherit;
+    font-weight: 600;
+    color: #06240f;
+    background: var(--snake);
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 28px;
+    cursor: pointer;
+  }
+  .overlay button:hover { filter: brightness(1.1); }
+  .dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    vertical-align: baseline;
+  }
+  .help {
+    margin: 10px 0 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+    text-align: center;
+  }
+  kbd {
+    background: var(--panel);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font: inherit;
+    color: var(--text);
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cobrinha <span>Turbo</span></h1>
+
+  <div class="hud">
+    <div class="stat"><small>Pontos</small><b id="score">0</b></div>
+    <div class="stat"><small>Recorde</small><b id="best">0</b></div>
+    <div class="stat"><small>Velocidade</small><b id="speed">1.0x</b></div>
+  </div>
+
+  <div class="effects">
+    <div class="effect" id="fx-ghost"><i></i><span>Atravessa paredes</span></div>
+    <div class="effect" id="fx-slow"><i></i><span>Câmera lenta</span></div>
+  </div>
+
+  <div class="board" id="board">
+    <canvas id="game" width="480" height="480"></canvas>
+    <div class="overlay" id="overlay">
+      <h2 id="ov-title">Cobrinha Turbo</h2>
+      <p id="ov-text">
+        Cada fruta deixa a cobra mais rápida.<br>
+        <span class="dot" style="background:var(--ghost)"></span> atravessa paredes ·
+        <span class="dot" style="background:var(--slow)"></span> câmera lenta
+      </p>
+      <button id="ov-btn">Jogar</button>
+    </div>
+  </div>
+
+  <p class="help">
+    <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> ou <kbd>WASD</kbd> para mover ·
+    <kbd>Espaço</kbd> pausa · no celular, deslize o dedo
+  </p>
+</main>
+
+<script>
+(() => {
+  const COLS = 24, ROWS = 24, CELL = 20;
+  const BASE_STEP = 140, MIN_STEP = 55, STEP_GAIN = 4; // ms por passo
+  const SLOW_FACTOR = 1.7;
+  const SPECIAL_EVERY = 5;       // a cada N frutas aparece uma especial
+  const SPECIAL_LIFETIME = 7000; // ms no tabuleiro
+  const EFFECT_MS = { ghost: 8000, slow: 6000 };
+  const BEST_KEY = 'cobrinha-turbo:recorde';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const board = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ov-title');
+  const ovText = document.getElementById('ov-text');
+  const ovBtn = document.getElementById('ov-btn');
+  const elScore = document.getElementById('score');
+  const elBest = document.getElementById('best');
+  const elSpeed = document.getElementById('speed');
+  const fx = {
+    ghost: document.getElementById('fx-ghost'),
+    slow: document.getElementById('fx-slow'),
+  };
+
+  const css = getComputedStyle(document.documentElement);
+  const color = name => css.getPropertyValue(name).trim();
+  const COLORS = {
+    grid: color('--grid'),
+    snake: color('--snake'),
+    snakeDark: color('--snake-dark'),
+    fruit: color('--fruit'),
+    ghost: color('--ghost'),
+    slow: color('--slow'),
+  };
+
+  let snake, dir, queue, food, special, effects;
+  let score, eaten, best, state, gameTime, acc, lastTs;
+
+  function loadBest() {
+    try { return Number(localStorage.getItem(BEST_KEY)) || 0; } catch { return 0; }
+  }
+  function saveBest(value) {
+    try { localStorage.setItem(BEST_KEY, String(value)); } catch { /* sem armazenamento */ }
+  }
+
+  function reset() {
+    const cy = Math.floor(ROWS / 2);
+    snake = [{ x: 8, y: cy }, { x: 7, y: cy }, { x: 6, y: cy }];
+    dir = { x: 1, y: 0 };
+    queue = [];
+    special = null;
+    effects = { ghost: 0, slow: 0 };
+    score = 0;
+    eaten = 0;
+    gameTime = 0;
+    acc = 0;
+    food = randomFreeCell();
+    updateHud();
+  }
+
+  function randomFreeCell() {
+    const free = [];
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const taken = snake.some(s => s.x === x && s.y === y)
+          || (food && food.x === x && food.y === y)
+          || (special && special.x === x && special.y === y);
+        if (!taken) free.push({ x, y });
+      }
+    }
+    return free.length ? free[Math.floor(Math.random() * free.length)] : null;
+  }
+
+  const active = type => effects[type] > gameTime;
+
+  function stepMs() {
+    const base = Math.max(MIN_STEP, BASE_STEP - eaten * STEP_GAIN);
+    return active('slow') ? base * SLOW_FACTOR : base;
+  }
+
+  function tick() {
+    if (queue.length) dir = queue.shift();
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    const outside = head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS;
+    if (outside) {
+      if (!active('ghost')) return gameOver();
+      head.x = (head.x + COLS) % COLS;
+      head.y = (head.y + ROWS) % ROWS;
+    }
+
+    const grows = food && head.x === food.x && head.y === food.y;
+    // a ponta da cauda sai do lugar neste passo, então só conta se a cobra crescer
+    const body = grows ? snake : snake.slice(0, -1);
+    if (body.some(s => s.x === head.x && s.y === head.y)) return gameOver();
+
+    snake.unshift(head);
+    if (grows) {
+      score += 1;
+      eaten += 1;
+      food = randomFreeCell();
+      if (!food) return gameOver(true);
+      if (eaten % SPECIAL_EVERY === 0 && !special) spawnSpecial();
+    } else {
+      snake.pop();
+    }
+
+    if (special && head.x === special.x && head.y === special.y) {
+      effects[special.type] = gameTime + EFFECT_MS[special.type];
+      score += 3;
+      special = null;
+    }
+    updateHud();
+  }
+
+  function spawnSpecial() {
+    const cell = randomFreeCell();
+    if (!cell) return;
+    const type = Math.random() < 0.5 ? 'ghost' : 'slow';
+    special = { ...cell, type, expires: gameTime + SPECIAL_LIFETIME };
+  }
+
+  function updateHud() {
+    elScore.textContent = score;
+    elBest.textContent = Math.max(best, score);
+    elSpeed.textContent = (BASE_STEP / stepMs()).toFixed(1) + 'x';
+  }
+
+  function updateEffects() {
+    for (const type of ['ghost', 'slow']) {
+      const left = Math.max(0, effects[type] - gameTime);
+      fx[type].classList.toggle('on', left > 0);
+      fx[type].firstElementChild.style.width = (left / EFFECT_MS[type] * 100) + '%';
+    }
+    board.classList.toggle('ghost', active('ghost'));
+  }
+
+  function showOverlay(title, html, button) {
+    ovTitle.textContent = title;
+    if (html !== null) ovText.innerHTML = html;
+    ovBtn.textContent = button;
+    overlay.hidden = false;
+  }
+
+  function start() {
+    reset();
+    state = 'playing';
+    overlay.hidden = true;
+  }
+
+  function togglePause() {
+    if (state === 'playing') {
+      state = 'paused';
+      showOverlay('Pausado', 'Aperte Espaço para continuar.', 'Continuar');
+    } else if (state === 'paused') {
+      state = 'playing';
+      overlay.hidden = true;
+    }
+  }
+
+  function gameOver(won = false) {
+    state = 'over';
+    const record = score > best;
+    if (record) {
+      best = score;
+      saveBest(best);
+    }
+    updateHud();
+    const line = record ? `Novo recorde: <b>${score}</b> pontos!` : `Você fez <b>${score}</b> pontos. Recorde: ${best}.`;
+    showOverlay(won ? 'Você zerou o jogo!' : 'Fim de jogo', line, 'Jogar de novo');
+  }
+
+  function primaryAction() {
+    if (state === 'playing' || state === 'paused') togglePause();
+    else start();
+  }
+
+  function steer(x, y) {
+    if (state !== 'playing') return;
+    const last = queue.length ? queue[queue.length - 1] : dir;
+    if (last.x === x && last.y === y) return;   // mesma direção
+    if (last.x === -x && last.y === -y) return; // meia-volta
+    if (queue.length < 2) queue.push({ x, y });
+  }
+
+  const KEYS = {
+    ArrowUp: [0, -1], KeyW: [0, -1],
+    ArrowDown: [0, 1], KeyS: [0, 1],
+    ArrowLeft: [-1, 0], KeyA: [-1, 0],
+    ArrowRight: [1, 0], KeyD: [1, 0],
+  };
+
+  addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') {
+      e.preventDefault();
+      if (!e.repeat) primaryAction();
+      return;
+    }
+    const move = KEYS[e.code];
+    if (!move) return;
+    e.preventDefault();
+    steer(move[0], move[1]);
+  });
+
+  ovBtn.addEventListener('click', primaryAction);
+
+  let touchStart = null;
+  board.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse') return;
+    touchStart = { x: e.clientX, y: e.clientY };
+  });
+  board.addEventListener('pointermove', e => {
+    if (!touchStart) return;
+    const dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+    if (Math.abs(dx) > Math.abs(dy)) steer(Math.sign(dx), 0);
+    else steer(0, Math.sign(dy));
+    touchStart = { x: e.clientX, y: e.clientY };
+  });
+  addEventListener('pointerup', () => { touchStart = null; });
+  addEventListener('pointercancel', () => { touchStart = null; });
+
+  addEventListener('blur', () => { if (state === 'playing') togglePause(); });
+
+  function roundedCell(x, y, inset, radius) {
+    ctx.beginPath();
+    ctx.roundRect(x * CELL + inset, y * CELL + inset, CELL - inset * 2, CELL - inset * 2, radius);
+    ctx.fill();
+  }
+
+  function circleCell(cell, radius) {
+    ctx.beginPath();
+    ctx.arc(cell.x * CELL + CELL / 2, cell.y * CELL + CELL / 2, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function draw(ts) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = COLORS.grid;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = (y % 2); x < COLS; x += 2) ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+    }
+
+    if (food) {
+      ctx.fillStyle = COLORS.fruit;
+      circleCell(food, CELL * 0.36);
+    }
+
+    if (special) {
+      const left = special.expires - gameTime;
+      const blink = left < 2000 && Math.floor(ts / 150) % 2 === 0;
+      if (!blink) {
+        ctx.fillStyle = COLORS[special.type];
+        ctx.globalAlpha = 0.25;
+        circleCell(special, CELL * (0.55 + 0.1 * Math.sin(ts / 180)));
+        ctx.globalAlpha = 1;
+        circleCell(special, CELL * 0.36);
+      }
+    }
+
+    const ghost = active('ghost');
+    ctx.globalAlpha = ghost ? 0.7 : 1;
+    for (let i = snake.length - 1; i >= 0; i--) {
+      ctx.fillStyle = i === 0
+        ? (ghost ? COLORS.ghost : COLORS.snake)
+        : (i % 2 ? COLORS.snakeDark : COLORS.snake);
+      roundedCell(snake[i].x, snake[i].y, i === 0 ? 1 : 2, i === 0 ? 6 : 4);
+    }
+    ctx.globalAlpha = 1;
+
+    // olhos
+    const h = snake[0];
+    const cx = h.x * CELL + CELL / 2, cy = h.y * CELL + CELL / 2;
+    ctx.fillStyle = '#06240f';
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(cx + dir.x * 4 + dir.y * side * 4, cy + dir.y * 4 + dir.x * side * 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function frame(ts) {
+    const dt = Math.min(ts - lastTs, 100);
+    lastTs = ts;
+    if (state === 'playing') {
+      gameTime += dt;
+      acc += dt;
+      if (special && gameTime > special.expires) special = null;
+      while (state === 'playing' && acc >= stepMs()) {
+        acc -= stepMs();
+        tick();
+      }
+      updateHud();
+    }
+    updateEffects();
+    draw(ts);
+    requestAnimationFrame(frame);
+  }
+
+  best = loadBest();
+  state = 'ready';
+  reset();
+  lastTs = performance.now();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

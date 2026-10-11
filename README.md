@@ -52,7 +52,7 @@ São mais de 10 anos de atuação técnica em dados, do SQL Server on-premise à
 
 ## Projetos
 
-### [lab-dados](https://github.com/leomnds/lab-dados)
+### [lab-dados](https://github.com/leomnds/leomnds/tree/main/lab-dados)
 
 Laboratório de dados local com Airflow 3, PostgreSQL 18 e n8n no Docker. O pipeline `bcb_pix_medalhao` carrega os dados abertos de Pix por município do Banco Central em arquitetura medalhão:
 
@@ -65,7 +65,7 @@ Laboratório de dados local com Airflow 3, PostgreSQL 18 e n8n no Docker. O pipe
 ### Outros
 
 - [dcalendario-powerquery](https://github.com/leomnds/dcalendario-powerquery): fork de uma dCalendario completa em linguagem M
-- [cobrinha-turbo](https://github.com/leomnds/cobrinha-turbo): jogo da cobrinha em JavaScript puro, feito por diversão
+- [cobrinha-turbo](https://github.com/leomnds/leomnds/tree/main/cobrinha-turbo): jogo da cobrinha em JavaScript puro, feito por diversão
 
 ## Formação e certificações
 

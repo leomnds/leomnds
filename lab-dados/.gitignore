@@ -1,0 +1,12 @@
+# Senhas e variáveis locais
+.env
+airflow/.env
+
+# Arquivos gerados pelo Airflow
+# (o airflow.cfg é criado na primeira subida e contém chaves secretas)
+airflow/logs/
+airflow/config/
+
+# Python
+__pycache__/
+.venv/

@@ -1,0 +1,48 @@
+# Laboratório de dados local: PostgreSQL + n8n
+# Subir:  docker compose up -d
+# Parar:  docker compose stop
+# As senhas ficam no arquivo .env (copie de .env.example). O .env não vai para o Git.
+
+name: lab-dados
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: lab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: America/Sao_Paulo
+    ports:
+      # Só acessível do próprio computador (127.0.0.1)
+      - "127.0.0.1:5432:5432"
+    volumes:
+      # Na versão 18 do PostgreSQL o volume vai em /var/lib/postgresql
+      - postgres_data:/var/lib/postgresql
+      # Scripts .sql desta pasta rodam só na primeira criação do banco
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  n8n:
+    image: n8nio/n8n
+    container_name: lab-n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Sao_Paulo
+      TZ: America/Sao_Paulo
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+    volumes:
+      # Guarda workflows, credenciais e a chave de criptografia do n8n
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  postgres_data:
+  n8n_data:
