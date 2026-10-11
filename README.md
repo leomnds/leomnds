@@ -61,6 +61,7 @@ Laboratório de dados local com Airflow 3, PostgreSQL 18 e n8n no Docker. O pipe
 - **Gold:** visão por estado e mês, com valor, quantidade, ticket médio e participação de PJ
 - Cargas idempotentes e parametrizadas por mês: reprocessar substitui os dados, sem duplicar
 - Validação de qualidade que barra a gold se o mês vier incompleto ou com valor negativo
+- Ambiente reproduzível: versões fixas no Docker e `setup.sh` que recria tudo do zero (senhas, containers e conexão do Airflow), com scripts de backup e restore
 
 ### Outros
 

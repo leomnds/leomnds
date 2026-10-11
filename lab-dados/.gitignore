@@ -2,6 +2,9 @@
 .env
 airflow/.env
 
+# Backups: o volume do n8n guarda credenciais e a chave que as criptografa
+backups/
+
 # Arquivos gerados pelo Airflow
 # (o airflow.cfg é criado na primeira subida e contém chaves secretas)
 airflow/logs/

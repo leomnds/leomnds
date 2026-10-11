@@ -1,0 +1,9 @@
+# Scripts e arquivos de configuração precisam de fim de linha do Linux (LF), mesmo quando
+# o repositório é clonado no Windows. Com CRLF o bash e o Docker quebram.
+* text=auto
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.py text eol=lf
+*.env.example text eol=lf
